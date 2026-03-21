@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Xiaoyi Ma — Mining Engineer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b64;
+    --border: #e0ddd6;
+    --bg: #fafaf8;
+    --bg-chip: #f2f0eb;
+    --font-serif: 'Lora', Georgia, serif;
+    --font-mono: 'DM Mono', 'Courier New', monospace;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --accent: #c8a96e;
+    --gold: #BA7517;
+    --gold-light: #FAC775;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --text-primary: #e8e6e0;
+      --text-secondary: #9a9890;
+      --border: #2e2d2a;
+      --bg: #141412;
+      --bg-chip: #1e1e1b;
+    }
+  }
+
+  html { background: var(--bg); scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-serif);
+    color: var(--text-primary);
+    background: var(--bg);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    cursor: none;
+  }
+
+  /* HAUL TRUCK CURSOR */
+  #ore-canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 9999;
+  }
+
+
+  /* NUGGET COUNTER */
+  #nugget-counter {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--gold); letter-spacing: 0.06em;
+    z-index: 9998; opacity: 0; transition: opacity 0.4s;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg); border: 0.5px solid var(--border);
+    padding: 5px 10px; border-radius: 20px;
+  }
+  #nugget-counter.show { opacity: 1; }
+  .pulse-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); animation: blink 1s step-end infinite; display: inline-block; }
+
+  /* SCROLL PROGRESS */
+  #progress {
+    position: fixed; top: 0; left: 0; height: 2px;
+    background: var(--accent); width: 0%; z-index: 9997;
+    transition: width 0.1s linear; border-radius: 0 2px 2px 0;
+  }
+
+  .site { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+  .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.65s ease, transform 0.65s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* NAV */
+  nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4rem; padding-bottom: 1.5rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .nav-name { font-family: var(--font-mono); font-size: 13px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+  .nav-links { display: flex; gap: 1.5rem; list-style: none; align-items: center; }
+  .nav-links a { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.05em; color: var(--text-secondary); text-decoration: none; transition: color 0.2s; cursor: none; }
+  .nav-links a:hover { color: var(--text-primary); }
+  .cmd-btn {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);
+    background: var(--bg-chip); border: 0.5px solid var(--border); border-radius: 6px;
+    padding: 4px 8px; cursor: none; display: flex; align-items: center; gap: 5px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .cmd-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+
+  /* HERO */
+  .hero { display: grid; grid-template-columns: 1fr 140px; gap: 2rem; align-items: start; margin-bottom: 3.5rem; }
+  .hero-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 1rem; }
+  .hero h1 { font-size: 1.85rem; font-weight: 400; line-height: 1.35; margin-bottom: 1.25rem; }
+  .hero h1 em { font-style: italic; color: var(--text-secondary); }
+  .hero p { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.8; }
+
+  #typewriter-target::after { content: '|'; font-style: normal; color: var(--accent); animation: blink 1.1s step-end infinite; margin-left: 1px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .hero-photo img {
+    width: 140px; height: 180px; object-fit: cover; object-position: center top;
+    border-radius: var(--radius-lg); display: block; border: 0.5px solid var(--border);
+    transition: filter 0.4s ease, transform 0.4s ease; filter: grayscale(25%);
+  }
+  .hero-photo img:hover { filter: grayscale(0%); transform: scale(1.02); }
+  .photo-caption { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); text-align: center; margin-top: 6px; letter-spacing: 0.04em; }
+
+  /* DEPTH TICKER */
+  #depth-ticker {
+    font-family: var(--font-mono); font-size: 11px; color: var(--gold);
+    letter-spacing: 0.05em; margin-top: 0.85rem;
+    display: flex; align-items: center; gap: 7px;
+  }
+
+  /* SECTIONS */
+  .section { margin-bottom: 3rem; }
+  .section-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+  .section-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); white-space: nowrap; }
+  .section-line { flex: 1; height: 0.5px; background: var(--border); }
+
+  /* SKILLS */
+  .skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .skill-chip {
+    font-family: var(--font-mono); font-size: 11px; padding: 6px 10px;
+    border: 0.5px solid var(--border); border-radius: var(--radius-md);
+    color: var(--text-secondary); letter-spacing: 0.04em; cursor: none;
+    position: relative; overflow: hidden;
+  }
+  .skill-chip::before { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity 0.3s; }
+  .skill-chip:hover::before { opacity: 0.09; }
+  .skill-chip:hover { border-color: var(--accent); color: var(--text-primary); }
+
+  /* DEPTH BAR */
+  .depth-bar-wrap { margin: 1rem 0 0.5rem; display: flex; flex-direction: column; gap: 6px; }
+  .depth-bar-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--text-secondary); display: flex; justify-content: space-between; }
+  .depth-bar-track { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .depth-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #d4b483); width: 0%; transition: width 1.6s cubic-bezier(0.16, 1, 0.3, 1); }
+
+  /* EXPERIENCE */
+  .exp-item { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; padding: 1rem 0; border-bottom: 0.5px solid var(--border); }
+  .exp-item:last-child { border-bottom: none; }
+  .exp-role { font-size: 0.95rem; font-weight: 500; margin-bottom: 2px; }
+  .exp-company { font-size: 0.85rem; color: var(--text-secondary); font-style: italic; }
+  .exp-date { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); white-space: nowrap; padding-top: 2px; }
+  .exp-desc { grid-column: 1 / -1; font-size: 0.875rem; color: var(--text-secondary); line-height: 1.65; margin-top: 4px; }
+
+  /* PROJECTS */
+  .project-item { padding: 1rem 0; border-bottom: 0.5px solid var(--border); transition: padding-left 0.25s; cursor: none; }
+  .project-item:last-child { border-bottom: none; }
+  .project-item:hover { padding-left: 8px; }
+  .project-title { font-size: 0.95rem; font-weight: 500; margin-bottom: 4px; }
+  .project-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; }
+  .project-desc { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.65; }
+
+  /* SITE VISITS */
+  .visit-item { display: flex; gap: 1rem; padding: 0.75rem 0; border-bottom: 0.5px solid var(--border); align-items: flex-start; }
+  .visit-item:last-child { border-bottom: none; }
+  .visit-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); margin-top: 8px; flex-shrink: 0; transition: background 0.3s; }
+  .visit-item:hover .visit-dot { background: var(--accent); }
+  .visit-name { font-size: 0.9rem; font-weight: 500; }
+  .visit-org { font-size: 0.82rem; color: var(--text-secondary); font-style: italic; }
+
+  /* EDUCATION */
+  .edu-block { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; padding: 0.75rem 0; border-bottom: 0.5px solid var(--border); }
+  .edu-block:last-child { border-bottom: none; }
+  .edu-degree { font-size: 0.95rem; font-weight: 500; }
+  .edu-uni { font-size: 0.875rem; color: var(--text-secondary); font-style: italic; margin-top: 2px; }
+  .edu-gpa { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); padding-top: 2px; white-space: nowrap; }
+
+  /* CERTS */
+  .cert-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cert-tag {
+    font-family: var(--font-mono); font-size: 11px; padding: 5px 10px;
+    background: var(--bg-chip); border-radius: var(--radius-md);
+    color: var(--text-secondary); cursor: none;
+    border: 0.5px solid transparent; transition: border-color 0.2s, color 0.2s;
+  }
+  .cert-tag:hover { border-color: var(--accent); color: var(--text-primary); }
+
+  /* LANGUAGES */
+  .lang-row { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .lang-item { font-size: 0.875rem; color: var(--text-secondary); }
+  .lang-item strong { font-weight: 500; color: var(--text-primary); }
+
+  /* CONTACT */
+  .contact-row { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+  .contact-row a { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); text-decoration: none; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); padding-bottom: 1px; transition: color 0.2s; cursor: none; }
+  .contact-row a:hover { color: var(--text-primary); }
+
+  /* COMMAND PALETTE */
+  #cmd-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 5000;
+    align-items: flex-start; justify-content: center;
+    padding-top: 15vh; backdrop-filter: blur(4px);
+  }
+  #cmd-overlay.open { display: flex; animation: fadeIn 0.15s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  #cmd-box {
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: 12px; width: min(540px, 90vw);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.15); overflow: hidden;
+    animation: slideUp 0.2s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes slideUp { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+  #cmd-input-wrap { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 0.5px solid var(--border); }
+  #cmd-input-wrap svg { color: var(--text-secondary); flex-shrink: 0; }
+  #cmd-input { flex: 1; border: none; background: transparent; font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); outline: none; caret-color: var(--accent); }
+  #cmd-input::placeholder { color: var(--text-secondary); }
+  #cmd-results { max-height: 340px; overflow-y: auto; padding: 8px; }
+  .cmd-group-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); padding: 8px 10px 4px; }
+  .cmd-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: none; transition: background 0.12s; font-size: 0.875rem; }
+  .cmd-item:hover, .cmd-item.selected { background: var(--bg-chip); }
+  .cmd-item-icon { font-size: 14px; width: 22px; text-align: center; flex-shrink: 0; color: var(--text-secondary); }
+  .cmd-item-label { flex: 1; }
+  #cmd-empty { padding: 2rem; text-align: center; font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 2rem; left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--text-primary); color: var(--bg);
+    font-family: var(--font-mono); font-size: 12px;
+    padding: 8px 16px; border-radius: 20px;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 6000; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* GOLD BURST */
+  .gold-burst {
+    position: fixed; pointer-events: none; z-index: 8000;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--gold-light); white-space: nowrap; font-weight: 500;
+    animation: burst-fly 0.9s cubic-bezier(0.16,1,0.3,1) forwards;
+  }
+  @keyframes burst-fly {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-40px) scale(0.75); }
+  }
+
+  @media (max-width: 520px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-photo { display: flex; flex-direction: column; align-items: flex-start; }
+    .hero-photo img { width: 100px; height: 128px; }
+    nav { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    body { cursor: auto; }
+    #ore-canvas { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="ore-canvas"></canvas>
+<div id="progress"></div>
+<div id="toast"></div>
+<div id="nugget-counter">
+  <span class="pulse-dot"></span>
+  <span id="nugget-count">0</span> honks
+</div>
+
+<!-- Command Palette -->
+<div id="cmd-overlay">
+  <div id="cmd-box">
+    <div id="cmd-input-wrap">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M10 6.5C10 8.433 8.433 10 6.5 10C4.567 10 3 8.433 3 6.5C3 4.567 4.567 3 6.5 3C8.433 3 10 4.567 10 6.5ZM9.304 10.011L12.146 12.854L11.854 13.146L9.011 10.304C8.372 10.74 7.602 11 6.773 11C4.564 11 2.773 9.209 2.773 7C2.773 4.791 4.564 3 6.773 3C8.982 3 10.773 4.791 10.773 7C10.773 7.829 10.513 8.599 10.077 9.238L9.304 10.011Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+      <input id="cmd-input" placeholder="Search or jump to…" autocomplete="off" spellcheck="false" />
+      <kbd style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary)">esc</kbd>
+    </div>
+    <div id="cmd-results"></div>
+  </div>
+</div>
+
+<div class="site">
+
+  <nav class="reveal">
+    <span class="nav-name">Xiaoyi Ma</span>
+    <ul class="nav-links">
+      <li><a href="#experience">Experience</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#education">Education</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li>
+        <button class="cmd-btn" id="open-cmd" title="Open command palette (⌘K)">
+          <svg width="11" height="11" viewBox="0 0 15 15" fill="none"><path d="M5.5 0C5.22386 0 5 0.223858 5 0.5V5H0.5C0.223858 5 0 5.22386 0 5.5V9.5C0 9.77614 0.223858 10 0.5 10H5V14.5C5 14.7761 5.22386 15 5.5 15H9.5C9.77614 15 10 14.7761 10 14.5V10H14.5C14.7761 10 15 9.77614 15 9.5V5.5C15 5.22386 14.7761 5 14.5 5H10V0.5C10 0.223858 9.77614 0 9.5 0H5.5ZM6 1H9V5.5C9 5.77614 9.22386 6 9.5 6H14V9H9.5C9.22386 9 9 9.22386 9 9.5V14H6V9.5C6 9.22386 5.77614 9 5.5 9H1V6H5.5C5.77614 6 6 5.77614 6 5.5V1Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/></svg>
+          <kbd>⌘K</kbd>
+        </button>
+      </li>
+    </ul>
+  </nav>
+
+  <section class="hero reveal">
+    <div class="hero-text">
+      <p class="hero-label">Mining Engineer · Kalgoorlie, WA</p>
+      <h1>Engineer at the intersection of <em id="typewriter-target"></em> and digital systems.</h1>
+      <p>Studying Mining Engineering at Curtin University (graduating June 2026) with a background in Computer Science from University of Colorado Boulder. I've worked underground at Gwalia — Australia's deepest trucking mine — and I bring software thinking to mine planning, ventilation, and geomechanics.</p>
+      <div id="depth-ticker">
+        <span class="pulse-dot"></span>
+        <span id="depth-val">0 m below surface · Gwalia, WA</span>
+      </div>
+    </div>
+    <div class="hero-photo">
+      <img src="IMG_0497.jpg" alt="Xiaoyi Ma at Macmahon, Gwalia" />
+      <p class="photo-caption">Gwalia, Leonora WA</p>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-header"><span class="section-label">Core skills</span><div class="section-line"></div></div>
+    <div class="skill-grid">
+      <div class="skill-chip">Mine Design &amp; Planning</div>
+      <div class="skill-chip">Ventilation Simulation</div>
+      <div class="skill-chip">3D Modelling (Vulcan)</div>
+      <div class="skill-chip">Machine Learning (RF/CNN)</div>
+      <div class="skill-chip">Python &amp; C++</div>
+      <div class="skill-chip">Database / SQL</div>
+      <div class="skill-chip">Deswik / Whittle</div>
+      <div class="skill-chip">Data Visualisation</div>
+      <div class="skill-chip">Geomechanics Research</div>
+    </div>
+  </section>
+
+  <section class="section reveal" id="experience">
+    <div class="section-header"><span class="section-label">Work experience</span><div class="section-line"></div></div>
+
+    <div class="exp-item">
+      <div><div class="exp-role">Vacation Engineer</div><div class="exp-company">Macmahon — Gwalia, Leonora</div></div>
+      <div class="exp-date">Nov 2025 – Feb 2026</div>
+      <div class="exp-desc">Operated Epiroc MT65 underground haul trucks at ~1,900 m depth at Gwalia, Australia's deepest underground gold mine. Managed long-distance haulage in a high-stress deep-mine environment across steep gradients alongside heavy mobile equipment.</div>
+      <div class="exp-desc depth-bar-wrap">
+        <div class="depth-bar-label"><span>SURFACE</span><span>1,900 m depth ▼</span></div>
+        <div class="depth-bar-track"><div class="depth-bar-fill" data-width="92"></div></div>
+        <div class="depth-bar-label"><span style="color:var(--accent)">Australia's deepest trucking mine</span></div>
+      </div>
+    </div>
+
+    <div class="exp-item">
+      <div><div class="exp-role">Lock Station Operator</div><div class="exp-company">KCGM Fimiston Mill — Kalgoorlie</div></div>
+      <div class="exp-date">Nov 2025</div>
+      <div class="exp-desc">Managed mill access control during shutdown, verified permits, and coordinated personnel movements to maintain safety and compliance.</div>
+    </div>
+
+    <div class="exp-item">
+      <div><div class="exp-role">Trade Assistant</div><div class="exp-company">Turfshop AU — Perth</div></div>
+      <div class="exp-date">Jun – Aug 2024</div>
+      <div class="exp-desc">Transported materials, prepared ground surfaces, and assisted with artificial turf and pathway installations.</div>
+    </div>
+  </section>
+
+  <section class="section reveal" id="projects">
+    <div class="section-header"><span class="section-label">Academic projects</span><div class="section-line"></div></div>
+
+    <div class="project-item">
+      <div class="project-title">ML &amp; Cryogenic Geomechanics — Thesis Research</div>
+      <div class="project-meta">Curtin University · Aug 2025 – May 2026</div>
+      <div class="project-desc">Investigating fracture mechanics of rock under cryogenic thermal cycles. Built Random Forest models to predict mechanical properties from microstructural characteristics and stress-strain behaviour across multiple scales.</div>
+    </div>
+
+    <div class="project-item">
+      <div class="project-title">Mine Design &amp; Feasibility Study</div>
+      <div class="project-meta">Curtin University · Aug – Oct 2025</div>
+      <div class="project-desc">Full technical and financial evaluation of a gold deposit using Deswik for pit optimisation, scheduling, and layout. Delivered CAPEX/OPEX, NPV, environmental risk, and stakeholder analysis.</div>
+    </div>
+
+    <div class="project-item">
+      <div class="project-title">Whittle Strategic Mine Planning</div>
+      <div class="project-meta">Curtin University · Jun – Sept 2025</div>
+      <div class="project-desc">Developed open pit plans using GEOVIA Whittle — pit limit, phase design, scheduling, and sensitivity analyses across cut-off grades and capacity scenarios.</div>
+    </div>
+
+    <div class="project-item">
+      <div class="project-title">Maptek Vulcan Resource Modelling</div>
+      <div class="project-meta">Curtin University · Apr – Jul 2025</div>
+      <div class="project-desc">Built a block model using collar, assay, survey, and lithology data. Applied Inverse Distance and Kriging for grade estimation; produced grade-tonnage curves and calculated mineral reserves.</div>
+    </div>
+
+    <div class="project-item">
+      <div class="project-title">Ventsim Underground Ventilation Design</div>
+      <div class="project-meta">Curtin University · Sept – Nov 2024</div>
+      <div class="project-desc">Designed a full mine ventilation system optimising airflow, heat, and gas control. Proposed EV integration to reduce diesel particulate matter and power consumption.</div>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-header"><span class="section-label">Mine site visits</span><div class="section-line"></div></div>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+      #mine-map { height: 320px; border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
+      .leaflet-container { background: #ede9e0; font-family: var(--font-mono) !important; }
+      .mine-popup .leaflet-popup-content-wrapper {
+        background: var(--bg); border: 0.5px solid var(--border);
+        border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); padding: 0;
+      }
+      .mine-popup .leaflet-popup-tip-container { display: none; }
+      .mine-popup .leaflet-popup-content { margin: 11px 14px; min-width: 160px; }
+      .popup-name { font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 3px; font-family: var(--font-mono); letter-spacing: 0.02em; }
+      .popup-sub  { font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono); line-height: 1.5; }
+      .popup-tag  { display: inline-block; margin-top: 6px; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; font-family: var(--font-mono); }
+      .tag-worked  { background: rgba(186,117,23,0.13); color: #9a6510; }
+      .tag-visited { background: var(--bg-chip); color: var(--text-secondary); }
+      .leaflet-control-attribution { font-family: var(--font-mono) !important; font-size: 9px !important; }
+    </style>
+
+    <div id="mine-map"></div>
+
+    <div class="visit-item" style="margin-top:1.25rem"><div class="visit-dot"></div><div><div class="visit-name">Golden Grove — 29Metals</div><div class="visit-org">Underground induction, drill &amp; blast, ventilation, geotechnical and backfill briefings · Apr 2025</div></div></div>
+    <div class="visit-item"><div class="visit-dot"></div><div><div class="visit-name">Carosue Dam Gold Mine — Northern Star</div><div class="visit-org">Underground tour and processing plant walkthrough · Sept 2024</div></div></div>
+    <div class="visit-item"><div class="visit-dot"></div><div><div class="visit-name">Boddington Gold Mine — Newmont</div><div class="visit-org">Open pit operations and tailings storage facility · Aug 2023</div></div></div>
+  </section>
+
+  <section class="section reveal" id="education">
+    <div class="section-header"><span class="section-label">Education</span><div class="section-line"></div></div>
+    <div class="edu-block">
+      <div><div class="edu-degree">Master of Professional Engineering (Mining)</div><div class="edu-uni">Curtin University, Kalgoorlie</div></div>
+      <div class="edu-gpa">CWA 74.7 · Jun 2026</div>
+    </div>
+    <div class="edu-block">
+      <div><div class="edu-degree">Bachelor of Computer Science + Economics</div><div class="edu-uni">University of Colorado Boulder</div></div>
+      <div class="edu-gpa">GPA 3.17 · 2022</div>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-header"><span class="section-label">Certifications &amp; licences</span><div class="section-line"></div></div>
+    <div class="cert-list">
+      <span class="cert-tag">WA Manual Driver's Licence</span>
+      <span class="cert-tag">Epiroc MT65 Haul Truck (Min. Supervision)</span>
+      <span class="cert-tag">LV Ticket</span>
+      <span class="cert-tag">2024 Curtin Global Merit Scholarship</span>
+    </div>
+  </section>
+
+  <section class="section reveal">
+    <div class="section-header"><span class="section-label">Languages</span><div class="section-line"></div></div>
+    <div class="lang-row">
+      <span class="lang-item"><strong>English</strong> — working proficiency</span>
+      <span class="lang-item"><strong>Chinese</strong> — native</span>
+      <span class="lang-item"><strong>Italian</strong> — beginner</span>
+    </div>
+  </section>
+
+  <section class="section reveal" id="contact">
+    <div class="section-header"><span class="section-label">Contact</span><div class="section-line"></div></div>
+    <div class="contact-row">
+      <a href="/cdn-cgi/l/email-protection#c4a9a5bcbdf3f3f1fc84a3a9a5ada8eaa7aba9" id="copy-email"><span class="__cf_email__" data-cfemail="ed808c9594dadad8d5ad8a808c8481c38e8280">[email&#160;protected]</span></a>
+      <a href="tel:+61478601693">0478 601 693</a>
+      <span style="font-family:'DM Mono',monospace;font-size:12px;color:#6b6b64;">Kalgoorlie, WA</span>
+    </div>
+  </section>
+
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const TAU = Math.PI * 2;
+
+// ══ CUTE TRUCK + SMOKE RINGS CURSOR ══
+const oreCanvas = document.getElementById('ore-canvas');
+const oreCtx = oreCanvas.getContext('2d');
+let mx = -200, my = -200;
+const rings = [];
+let nuggets = 0;
+
+function resizeOre() { oreCanvas.width = window.innerWidth; oreCanvas.height = window.innerHeight; }
+resizeOre();
+window.addEventListener('resize', resizeOre);
+
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+function drawTruck(ctx, x, y) {
+  // chassis bar
+  ctx.beginPath(); ctx.roundRect(x-16, y+2, 30, 4, 1); ctx.fillStyle='#c8920a'; ctx.fill();
+  // dump tub — big angled box (the hero feature)
+  ctx.beginPath();
+  ctx.moveTo(x-16, y+2);   // bottom-left
+  ctx.lineTo(x+1,  y+2);   // bottom-right
+  ctx.lineTo(x+2,  y-8);   // top-right (angled)
+  ctx.lineTo(x-15, y-8);   // top-left
+  ctx.closePath();
+  ctx.fillStyle = '#F5C440'; ctx.fill();
+  // tub inner shadow
+  ctx.beginPath();
+  ctx.moveTo(x-14, y+1); ctx.lineTo(x+0.5, y+1);
+  ctx.lineTo(x+1,  y-7); ctx.lineTo(x-13,  y-7);
+  ctx.closePath(); ctx.fillStyle='#c8920a'; ctx.fill();
+  // tub top rim
+  ctx.beginPath(); ctx.roundRect(x-16, y-9, 19, 2, 0.5); ctx.fillStyle='#F5C440'; ctx.fill();
+  // cab — boxy
+  ctx.beginPath(); ctx.roundRect(x+1, y-8, 13, 10, 2); ctx.fillStyle='#F5C440'; ctx.fill();
+  // windshield
+  ctx.beginPath(); ctx.roundRect(x+2.5, y-7, 9, 5.5, 1); ctx.fillStyle='rgba(180,220,255,0.85)'; ctx.fill();
+  // cab roof
+  ctx.beginPath(); ctx.roundRect(x+0.5, y-9, 14, 2, 1); ctx.fillStyle='#F5C440'; ctx.fill();
+  // exhaust stack
+  ctx.fillStyle='rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.roundRect(x+3.5, y-11, 2, 3, 0.4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(x+3,   y-11.5, 3, 1.2, 0.3); ctx.fill();
+  // wheels — chonky with tread
+  [[-9, 5.5], [10, 5.5]].forEach(([wx,wy]) => {
+    ctx.beginPath(); ctx.arc(x+wx, y+wy, 5, 0, TAU); ctx.fillStyle='#1a1a18'; ctx.fill();
+    for (let i=0;i<6;i++){const a=(i/6)*TAU;ctx.beginPath();ctx.arc(x+wx,y+wy,5,a,a+0.25);ctx.strokeStyle='#333';ctx.lineWidth=1.6;ctx.stroke();}
+    ctx.beginPath(); ctx.arc(x+wx, y+wy, 2.8, 0, TAU); ctx.fillStyle='#555'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x+wx, y+wy, 1.2, 0, TAU); ctx.fillStyle='#999'; ctx.fill();
+  });
+}
+
+// emit smoke rings from exhaust stack
+setInterval(() => {
+  if (mx > -100) rings.push({ x: mx+4, y: my-11.5, r: 2, life: 1, vy: -0.5 });
+}, 200);
+
+(function animTruck() {
+  oreCtx.clearRect(0, 0, oreCanvas.width, oreCanvas.height);
+  for (let i = rings.length-1; i >= 0; i--) {
+    const rg = rings[i];
+    rg.y += rg.vy; rg.r += 0.5; rg.life -= 0.025;
+    if (rg.life <= 0) { rings.splice(i,1); continue; }
+    oreCtx.beginPath(); oreCtx.arc(rg.x, rg.y, rg.r, 0, TAU);
+    oreCtx.strokeStyle = `rgba(100,95,88,${rg.life*0.4})`; oreCtx.lineWidth=1.2; oreCtx.stroke();
+  }
+  if (mx > -100) drawTruck(oreCtx, mx, my);
+  requestAnimationFrame(animTruck);
+})();
+
+// Click = honk!
+document.addEventListener('click', e => {
+  nuggets++;
+  document.getElementById('nugget-count').textContent = nuggets;
+  document.getElementById('nugget-counter').classList.add('show');
+  const labels = ['📯 HONK!', '🚛 BEEP BEEP!', '💨 MOVE IT!', '⛏ SHIFT CHANGE!', '🟡 MT65!'];
+  const burst = document.createElement('div');
+  burst.className = 'gold-burst';
+  burst.textContent = labels[nuggets % labels.length];
+  burst.style.left = (e.clientX + 16) + 'px';
+  burst.style.top = (e.clientY - 8) + 'px';
+  document.body.appendChild(burst);
+  setTimeout(() => burst.remove(), 950);
+  for (let i = 0; i < 8; i++) {
+    rings.push({ x: e.clientX+(Math.random()-.5)*10, y: e.clientY-11, r: 2+i*0.5, life: 1, vy: -Math.random()*1.2-0.3 });
+  }
+});
+
+// ══ SCROLL PROGRESS ══
+const progress = document.getElementById('progress');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  progress.style.width = (h.scrollTop / (h.scrollHeight - h.clientHeight) * 100) + '%';
+}, { passive: true });
+
+// ══ SCROLL REVEAL ══
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add('visible');
+    e.target.querySelectorAll('.depth-bar-fill').forEach(bar => { bar.style.width = bar.dataset.width + '%'; });
+  });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ══ TYPEWRITER ══
+const phrases = ['deep rock', 'hard data', 'dark stopes', 'raw earth', 'gold ore'];
+let pi = 0, ci = 0, deleting = false;
+const tw = document.getElementById('typewriter-target');
+function typeStep() {
+  const phrase = phrases[pi];
+  if (!deleting) {
+    tw.textContent = phrase.slice(0, ++ci);
+    if (ci === phrase.length) { setTimeout(() => { deleting = true; typeStep(); }, 2000); return; }
+  } else {
+    tw.textContent = phrase.slice(0, --ci);
+    if (ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; }
+  }
+  setTimeout(typeStep, deleting ? 55 : 90);
+}
+setTimeout(typeStep, 900);
+
+// ══ DEPTH TICKER ══
+let depthAnim = 0;
+const depthEl = document.getElementById('depth-val');
+function animDepth() {
+  depthAnim = Math.min(depthAnim + 5, 1900);
+  depthEl.textContent = depthAnim.toLocaleString() + ' m below surface · Gwalia, WA';
+  if (depthAnim < 1900) setTimeout(animDepth, 16);
+}
+setTimeout(animDepth, 1400);
+
+// ══ LEAFLET MINE MAP ══
+(function initMap() {
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.onload = () => {
+    const map = L.map('mine-map', {
+      center: [-27.5, 120.5],
+      zoom: 6,
+      zoomControl: true,
+      scrollWheelZoom: false,
+      attributionControl: true
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap contributors © CARTO',
+      subdomains: 'abcd', maxZoom: 14
+    }).addTo(map);
+
+    function makeIcon(gold) {
+      return L.divIcon({
+        className: '',
+        html: `<div style="
+          width:${gold ? 14 : 11}px; height:${gold ? 14 : 11}px;
+          background:${gold ? '#FAC775' : '#888780'};
+          border:2px solid ${gold ? '#BA7517' : '#5F5E5A'};
+          border-radius:50%;
+          box-shadow:${gold ? '0 0 8px rgba(186,117,23,0.5)' : 'none'};
+        "></div>`,
+        iconSize: [gold ? 14 : 11, gold ? 14 : 11],
+        iconAnchor: [gold ? 7 : 5, gold ? 7 : 5],
+        popupAnchor: [0, gold ? -10 : -8]
+      });
+    }
+
+    const sites = [
+      { name: 'Golden Grove', company: '29Metals', detail: 'Underground induction, drill & blast, ventilation · Apr 2025', lat: -28.96, lng: 117.05, gold: false },
+      { name: 'Carosue Dam', company: 'Northern Star Resources', detail: 'Underground tour & processing plant walkthrough · Sept 2024', lat: -29.93, lng: 121.49, gold: false },
+      { name: 'Boddington', company: 'Newmont', detail: 'Open pit operations & tailings storage facility · Aug 2023', lat: -32.80, lng: 116.47, gold: false },
+      { name: 'Gwalia', company: 'Macmahon', detail: "Australia's deepest trucking mine · Worked Nov 2025 – Feb 2026", lat: -27.99, lng: 120.55, gold: true },
+      { name: 'Kalgoorlie–Boulder', company: 'KCGM Fimiston Mill', detail: 'Lock Station Operator · Nov 2025', lat: -30.75, lng: 121.47, gold: true },
+    ];
+
+    sites.forEach(s => {
+      const tag = s.gold
+        ? `<span class="popup-tag tag-worked">★ worked here</span>`
+        : `<span class="popup-tag tag-visited">visited</span>`;
+      const popup = `
+        <div class="popup-name">${s.name}</div>
+        <div class="popup-sub">${s.company}<br>${s.detail}</div>
+        ${tag}
+      `;
+      L.marker([s.lat, s.lng], { icon: makeIcon(s.gold) })
+        .addTo(map)
+        .bindPopup(popup, { className: 'mine-popup', maxWidth: 220 });
+    });
+  };
+  document.head.appendChild(script);
+})();
+
+// ══ TOAST ══
+const toast = document.getElementById('toast');
+function showToast(msg) { toast.textContent = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+
+document.getElementById('copy-email').addEventListener('click', e => {
+  e.preventDefault();
+  navigator.clipboard.writeText('maxy7758@gmail.com').then(() => showToast('📋 Email copied to clipboard'));
+});
+
+// ══ COMMAND PALETTE ══
+const commands = [
+  { group: 'Navigate', icon: '#', label: 'Jump to Experience', action: () => document.getElementById('experience').scrollIntoView({behavior:'smooth'}) },
+  { group: 'Navigate', icon: '#', label: 'Jump to Projects', action: () => document.getElementById('projects').scrollIntoView({behavior:'smooth'}) },
+  { group: 'Navigate', icon: '#', label: 'Jump to Education', action: () => document.getElementById('education').scrollIntoView({behavior:'smooth'}) },
+  { group: 'Navigate', icon: '#', label: 'Jump to Contact', action: () => document.getElementById('contact').scrollIntoView({behavior:'smooth'}) },
+  { group: 'Actions', icon: '✉️', label: 'Copy email address', action: () => { navigator.clipboard.writeText('maxy7758@gmail.com'); showToast('📋 Email copied'); } },
+  { group: 'Actions', icon: '📞', label: 'Copy phone number', action: () => { navigator.clipboard.writeText('+61478601693'); showToast('📋 Phone copied'); } },
+  { group: 'Actions', icon: '📄', label: 'Print / Save as PDF', action: () => window.print() },
+];
+
+const overlay = document.getElementById('cmd-overlay');
+const cmdInput = document.getElementById('cmd-input');
+const cmdResults = document.getElementById('cmd-results');
+let selectedIdx = 0, filtered = [];
+
+function openCmd() { overlay.classList.add('open'); cmdInput.value=''; cmdInput.focus(); selectedIdx=0; renderCmd(''); }
+function closeCmd() { overlay.classList.remove('open'); }
+
+document.getElementById('open-cmd').addEventListener('click', openCmd);
+window.addEventListener('keydown', e => {
+  if ((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); openCmd(); return; }
+  if (!overlay.classList.contains('open')) return;
+  if (e.key==='Escape') { closeCmd(); return; }
+  if (e.key==='ArrowDown') { selectedIdx=Math.min(selectedIdx+1, filtered.length-1); renderCmd(cmdInput.value); }
+  else if (e.key==='ArrowUp') { selectedIdx=Math.max(selectedIdx-1, 0); renderCmd(cmdInput.value); }
+  else if (e.key==='Enter' && filtered[selectedIdx]) { filtered[selectedIdx].action(); closeCmd(); }
+});
+overlay.addEventListener('click', e => { if (e.target===overlay) closeCmd(); });
+cmdInput.addEventListener('input', () => { selectedIdx=0; renderCmd(cmdInput.value); });
+
+function renderCmd(q) {
+  const query = q.toLowerCase().trim();
+  filtered = query ? commands.filter(c => c.label.toLowerCase().includes(query)) : commands;
+  if (!filtered.length) { cmdResults.innerHTML='<div id="cmd-empty">No results for "'+q+'"</div>'; return; }
+  const groups = {};
+  filtered.forEach((c,i) => { (groups[c.group]=groups[c.group]||[]).push({...c,i}); });
+  cmdResults.innerHTML = Object.entries(groups).map(([g,items]) =>
+    `<div class="cmd-group-label">${g}</div>` +
+    items.map(item=>`<div class="cmd-item${item.i===selectedIdx?' selected':''}" data-i="${item.i}"><span class="cmd-item-icon">${item.icon}</span><span class="cmd-item-label">${item.label}</span></div>`).join('')
+  ).join('');
+  cmdResults.querySelectorAll('.cmd-item').forEach(el => {
+    el.addEventListener('click', () => { filtered[+el.dataset.i].action(); closeCmd(); });
+    el.addEventListener('mouseenter', () => { selectedIdx=+el.dataset.i; renderCmd(cmdInput.value); });
+  });
+}
+
+// ══ STAGGER SKILL CHIPS ══
+document.querySelectorAll('.skill-chip').forEach((chip, i) => {
+  chip.style.opacity = '0';
+  chip.style.transform = 'translateY(8px)';
+  chip.style.transition = `opacity 0.4s ${i*0.06}s ease, transform 0.4s ${i*0.06}s ease, border-color 0.3s, color
